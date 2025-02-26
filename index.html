@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Road Rumble - A Thrilling Car Dodge Game</title>
+<style>
+    body, html {
+        margin: 0;
+        overflow: hidden;
+        background-color: #000;
+        font-family: 'Impact', Charcoal, sans-serif; /* Dramatic font */
+        height: 100%;
+        width: 100%;
+    }
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+    }
+    .menu-screen {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 50px;
+        color: white;
+        text-align: center;
+        display: none;
+        text-shadow: 4px 4px 8px rgba(255, 0, 0, 0.7);
+    }
+    .menu-screen h1 {
+        font-size: 100px;
+        margin-bottom: 30px;
+        animation: bounce 2s infinite alternate;
+        color: #ff0000;
+        text-shadow: 4px 4px 8px rgba(255, 0, 0, 0.7);
+    }
+    .menu-screen button {
+        margin: 10px;
+        padding: 20px 40px;
+        font-size: 35px;
+        cursor: pointer;
+        background-color: rgba(255, 255, 255, 0.8);
+        border: none;
+        border-radius: 20px;
+        box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.7);
+        transition: background-color 0.3s ease, transform 0.3s ease;
+        font-family: 'Impact', Charcoal, sans-serif; /* Dramatic font */
+    }
+    .menu-screen button:hover {
+        background-color: rgba(255, 255, 255, 1);
+        transform: scale(1.05);
+    }
+    #controls {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 25px;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        font-family: 'Impact', Charcoal, sans-serif; /* Dramatic font */
+    }
+    @keyframes bounce {
+        from { transform: translateY(0); }
+        to { transform: translateY(-10px); }
+    }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<!-- Main Menu -->
+<div id="main-menu" class="menu-screen">
+    <h1>Road Rumble</h1>
+    <button onclick="startGame()">Start Game</button>
+    <button onclick="quitGame()">Quit</button>
+</div>
+
+<!-- Game Over Screen -->
+<div id="game-over" class="menu-screen" style="display: none;">
+    <p>You Crashed!</p>
+    <button onclick="restartGame()">Restart</button>
+    <button onclick="quitGame()">Quit</button>
+</div>
+
+<!-- Pause Screen -->
+<div id="pause-screen" class="menu-screen" style="display: none;">
+    <p>Paused</p>
+    <button onclick="unpauseGame()">Continue</button>
+    <button onclick="quitGame()">Quit</button>
+</div>
+
+<div id="controls"></div>
+
+<audio id="backgroundMusic" src="CarSound.mp3" loop></audio>
+<audio id="crashSound" src="CarBreak.mp3"></audio>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+let carX = canvas.width / 2 - 50;
+let carY = canvas.height - 120;
+let carSpeed = 15;
+let obstacleX = Math.random() * (canvas.width - 100);
+let obstacleY = -100;
+let obstacleSpeed = 4;
+let dodged = 0;
+let gameOver = false;
+let pause = false;
+let gameStarted = false;
+
+// Random color generator for obstacles
+function getRandomColor() {
+    const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
+
+let obstacleColor = getRandomColor();
+
+const carImage = new Image();
+carImage.src = 'car-image.png'; // Replace with a valid car image URL
+
+const backgroundMusic = document.getElementById('backgroundMusic');
+const crashSound = document.getElementById('crashSound');
+
+function drawCar() {
+    ctx.drawImage(carImage, carX, carY, 127, 127);
+}
+
+function drawObstacle() {
+    ctx.fillStyle = obstacleColor;
+    ctx.fillRect(obstacleX, obstacleY, 100, 100);
+}
+
+function drawScore() {
+    ctx.fillStyle = 'white';
+    ctx.font = '35px Impact';
+    ctx.fillText(`Dodged: ${dodged}`, 10, 50);
+    ctx.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.5)';
+}
+
+function drawRoadLines() {
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 10;
+    for (let y = 0; y < canvas.height; y += 150) {
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2 - 5, y);
+        ctx.lineTo(canvas.width / 2 - 5, y + 50);
+        ctx.stroke();
+    }
+}
+
+function drawRoad() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#000');
+    gradient.addColorStop(1, '#333');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function updateGame() {
+    if (gameOver || pause) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw road
+    drawRoad();
+
+    // Move road lines
+    drawRoadLines();
+
+    obstacleY += obstacleSpeed;
+    if (obstacleY > canvas.height) {
+        obstacleY = -100;
+        obstacleX = Math.random() * (canvas.width - 100);
+        obstacleColor = getRandomColor(); // Assign a new color when obstacle resets
+        dodged++;
+        obstacleSpeed += 0.1; // Increase obstacle speed progressively
+    }
+    drawCar();
+    drawObstacle();
+    drawScore();
+    checkCollision();
+    requestAnimationFrame(updateGame);
+}
+
+function checkCollision() {
+    if (
+        carX < obstacleX + 100 &&
+        carX + 100 > obstacleX &&
+        carY < obstacleY + 100 &&
+        carY + 100 > obstacleY
+    ) {
+        gameOver = true;
+        crashSound.play();
+        document.getElementById('game-over').style.display = 'block';
+        backgroundMusic.pause();
+    }
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'ArrowLeft' && carX > 0) carX -= carSpeed;
+    if (event.key === 'ArrowRight' && carX < canvas.width - 100) carX += carSpeed;
+    if (event.key === 'p') togglePause();
+});
+
+function togglePause() {
+    pause = !pause;
+    if (pause) {
+        document.getElementById('pause-screen').style.display = 'block';
+        backgroundMusic.pause();
+    } else {
+        document.getElementById('pause-screen').style.display = 'none';
+        backgroundMusic.play();
+    }
+}
+
+function startGame() {
+    document.getElementById('main-menu').style.display = 'none';
+    gameStarted = true;
+    gameOver = false;
+    pause = false;
+    carX = canvas.width / 2 - 50;
+    carY = canvas.height - 120;
+    obstacleX = Math.random() * (canvas.width - 100);
+    obstacleY = -100;
+    obstacleColor = getRandomColor(); // Set initial color
+    dodged = 0;
+    obstacleSpeed = 4;
+    backgroundMusic.currentTime = 0;
+    backgroundMusic.play();
+    updateGame();
+}
+
+function restartGame() {
+    document.getElementById('game-over').style.display = 'none';
+    startGame();
+}
+
+function unpauseGame() {
+    togglePause();
+}
+
+function quitGame() {
+    document.location.reload();
+}
+
+carImage.onload = () => {
+    document.getElementById('main-menu').style.display = 'block';
+};
+</script>
+</body>
+</html>
