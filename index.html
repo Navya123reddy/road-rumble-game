@@ -62,6 +62,31 @@
         color: white;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         font-family: 'Impact', Charcoal, sans-serif; /* Dramatic font */
+        display: none;
+    }
+    .mobile-controls {
+        position: absolute;
+        bottom: 20px;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        display: none;
+    }
+    .mobile-controls button {
+        padding: 30px;
+        font-size: 30px;
+        cursor: pointer;
+        background-color: rgba(255, 255, 255, 0.8);
+        border: none;
+        border-radius: 50%;
+        box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.7);
+        transition: background-color 0.3s ease, transform 0.3s ease;
+        font-family: 'Impact', Charcoal, sans-serif; /* Dramatic font */
+    }
+    .mobile-controls button:hover {
+        background-color: rgba(255, 255, 255, 1);
+        transform: scale(1.05);
     }
     @keyframes bounce {
         from { transform: translateY(0); }
@@ -71,6 +96,13 @@
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
+
+<!-- Control Selection Screen -->
+<div id="control-selection" class="menu-screen">
+    <h1>Select Controls</h1>
+    <button onclick="selectControls('desktop')">Desktop Controls</button>
+    <button onclick="selectControls('mobile')">Mobile Controls</button>
+</div>
 
 <!-- Main Menu -->
 <div id="main-menu" class="menu-screen">
@@ -94,6 +126,10 @@
 </div>
 
 <div id="controls"></div>
+<div id="mobile-controls" class="mobile-controls">
+    <button onclick="moveCar('left')">←</button>
+    <button onclick="moveCar('right')">→</button>
+</div>
 
 <audio id="backgroundMusic" src="CarSound.mp3" loop></audio>
 <audio id="crashSound" src="CarBreak.mp3"></audio>
@@ -120,6 +156,7 @@ let dodged = 0;
 let gameOver = false;
 let pause = false;
 let gameStarted = false;
+let controlType = 'desktop';
 
 // Random color generator for obstacles
 function getRandomColor() {
@@ -130,7 +167,7 @@ function getRandomColor() {
 let obstacleColor = getRandomColor();
 
 const carImage = new Image();
-carImage.src = 'car-image.png'; // Replace with a valid car image URL
+carImage.src = 'car-image.png'; // Use a relative path
 
 const backgroundMusic = document.getElementById('backgroundMusic');
 const crashSound = document.getElementById('crashSound');
@@ -209,11 +246,39 @@ function checkCollision() {
     }
 }
 
+
 document.addEventListener('keydown', function(event) {
-    if (event.key === 'ArrowLeft' && carX > 0) carX -= carSpeed;
-    if (event.key === 'ArrowRight' && carX < canvas.width - 100) carX += carSpeed;
-    if (event.key === 'p') togglePause();
+    if (gameOver || pause || controlType !== 'desktop') return;
+    
+    // Debugging the event to check if key is being pressed
+    console.log(`Key pressed: ${event.key}`);
+    
+    if (event.key === 'ArrowLeft' && carX > 0) {
+        carX -= carSpeed;
+    }
+    if (event.key === 'ArrowRight' && carX < canvas.width - 100) {
+        carX += carSpeed;
+    }
+    if (event.key === 'p') togglePause(); // For pause functionality
 });
+// document.addEventListener('keydown', function(event) {
+//     if (controlType !== 'desktop') return;
+//     if (event.key === 'ArrowLeft' && carX > 0) carX -= carSpeed;
+//     if (event.key === 'ArrowRight' && carX < canvas.width - 100) carX += carSpeed;
+//     if (event.key === 'p') togglePause();
+// });
+
+function moveCar(direction) {
+    if (controlType !== 'mobile') return;
+    if (direction === 'left' && carX > 0) carX -= carSpeed;
+    if (direction === 'right' && carX < canvas.width - 100) carX += carSpeed;
+}
+
+// function moveCar(direction) {
+//     if (controlType !== 'mobile') return;
+//     if (direction === 'left' && carX > 0) carX -= carSpeed;
+//     if (direction === 'right' && carX < canvas.width - 100) carX += carSpeed;
+// }
 
 function togglePause() {
     pause = !pause;
@@ -256,8 +321,31 @@ function quitGame() {
     document.location.reload();
 }
 
-carImage.onload = () => {
+function selectControls(type) {
+    controlType = type;
+    document.getElementById('control-selection').style.display = 'none';
+    if (type === 'desktop') {
+        document.getElementById('controls').style.display = 'block';
+    } else {
+        document.getElementById('mobile-controls').style.display = 'flex';
+    }
     document.getElementById('main-menu').style.display = 'block';
+}
+
+carImage.onload = () => {
+    document.getElementById('control-selection').style.display = 'block';
+};
+
+carImage.onerror = () => {
+    alert('Failed to load car image.');
+};
+
+backgroundMusic.onerror = () => {
+    alert('Failed to load background music.');
+};
+
+crashSound.onerror = () => {
+    alert('Failed to load crash sound.');
 };
 </script>
 </body>
